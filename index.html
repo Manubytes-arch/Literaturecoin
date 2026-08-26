@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeerCoin - Mina leyendo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0d1117;
+            color: #e6edf3;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 {
+            color: #58a6ff;
+            text-align: center;
+            margin: 30px 0 10px;
+            font-size: 2.8rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #8b949e;
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+        }
+        .card {
+            background: #161b22;
+            border: 1px solid #30363d;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            color: #f0f6fc;
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+        }
+        .stat {
+            background: #0d1117;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #21262d;
+        }
+        .stat-number {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #58a6ff;
+        }
+        .stat-label {
+            color: #8b949e;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+        }
+        .btn {
+            background: #238636;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background 0.3s;
+            width: 100%;
+        }
+        .btn:hover {
+            background: #2ea043;
+        }
+        .btn-secondary {
+            background: #21262d;
+        }
+        .btn-secondary:hover {
+            background: #30363d;
+        }
+        .read-area {
+            background: #0d1117;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #21262d;
+            font-size: 1rem;
+            line-height: 1.6;
+            color: #c9d1d9;
+        }
+        .read-area p {
+            margin-bottom: 12px;
+        }
+        .alert {
+            background: #1f2937;
+            border-left: 4px solid #58a6ff;
+            padding: 12px 16px;
+            border-radius: 6px;
+            margin: 15px 0;
+            color: #c9d1d9;
+            font-size: 0.95rem;
+        }
+        .badge {
+            display: inline-block;
+            background: #1f6feb;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.75rem;
+            font-weight: bold;
+            color: white;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #21262d;
+            border-radius: 4px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: #58a6ff;
+            width: 0%;
+            transition: width 0.5s;
+            border-radius: 4px;
+        }
+        .footer {
+            text-align: center;
+            color: #8b949e;
+            font-size: 0.85rem;
+            margin-top: 40px;
+            padding: 20px 0;
+            border-top: 1px solid #21262d;
+        }
+        @media (max-width: 500px) {
+            h1 { font-size: 2rem; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📖 LeerCoin</h1>
+        <p class="subtitle">Mina criptomonedas leyendo artículos · Sin bots · Sin trampas</p>
+
+        <!-- Panel de métricas -->
+        <div class="card">
+            <h2>📊 Panel de métricas</h2>
+            <div class="stats-grid">
+                <div class="stat">
+                    <div class="stat-number" id="totalReads">0</div>
+                    <div class="stat-label">Lecturas completadas</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="activeUsers">1</div>
+                    <div class="stat-label">Usuarios activos hoy</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="avgTime">0</div>
+                    <div class="stat-label">Tiempo promedio (min)</div>
+                </div>
+                <div class="stat">
+                    <div class="stat-number" id="coinsMined">0</div>
+                    <div class="stat-label">$LER minados</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Área de lectura -->
+        <div class="card">
+            <h2>📝 Lee y gana $LER</h2>
+            <div class="alert">
+                ⚡ <strong>Minando activo:</strong> Lee al menos 2 minutos y completa el texto para ganar <strong>1 $LER</strong>.
+            </div>
+            <div class="read-area" id="readArea">
+                <p><strong>El poder de la lectura atenta</strong></p>
+                <p>En un mundo de distracciones constantes, la capacidad de leer con atención se está convirtiendo en un superpoder. Cada vez menos personas logran concentrarse en un texto por más de 60 segundos.</p>
+                <p>LeerCoin nace para cambiar eso. Queremos recompensar a quienes cultivan su mente, a quienes dedican tiempo a entender, reflexionar y aprender.</p>
+                <p><strong>¿Cómo funciona?</strong> Cada vez que lees un artículo completo en nuestra plataforma, ganas monedas. No necesitas minería costosa ni hardware especial. Solo tu atención y tu tiempo.</p>
+                <p>Más adelante, estas monedas podrán canjearse por libros, cursos y experiencias educativas. Porque creemos que el conocimiento debe ser accesible, y quienes lo buscan merecen ser reconocidos.</p>
+                <p>Este es el primer paso de una revolución silenciosa: la economía de la atención bien invertida. ¿Te sumas?</p>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn" id="btnStartReading">▶ Empezar a leer</button>
+                <button class="btn btn-secondary" id="btnClaimCoin" disabled>✅ Reclamar 1 $LER</button>
+            </div>
+            <div id="message" style="margin-top: 15px; color: #58a6ff; text-align: center; font-weight: bold;"></div>
+        </div>
+
+        <!-- Sección para marcas -->
+        <div class="card">
+            <h2>📢 Para marcas y patrocinadores</h2>
+            <p style="color: #c9d1d9; margin-bottom: 15px;">
+                ¿Quieres llegar a una audiencia que <strong>realmente presta atención</strong>? 
+                En LeerCoin, los usuarios ganan monedas al leer tu contenido. <strong>Solo pagas por lecturas completas.</strong>
+            </p>
+            <ul style="color: #c9d1d9; margin-bottom: 15px; padding-left: 20px;">
+                <li>✅ Audiencia cautiva y comprometida</li>
+                <li>✅ Métricas reales de tiempo de lectura</li>
+                <li>✅ Sin bots, sin clics falsos</li>
+            </ul>
+            <button class="btn btn-secondary" id="btnContact">📩 Contactar a patrocinio</button>
+        </div>
+
+        <div class="footer">
+            LeerCoin · Proyecto demo · Edición 2026
+        </div>
+    </div>
+
+    <script>
+        // ----- Sistema de lectura y minado -----
+        let isReading = false;
+        let startTime = 0;
+        let elapsedTime = 0;
+        let timerInterval = null;
+        let canClaim = false;
+        let totalReads = parseInt(localStorage.getItem('totalReads')) || 0;
+        let coinsMined = parseInt(localStorage.getItem('coinsMined')) || 0;
+
+        // Elementos
+        const readArea = document.getElementById('readArea');
+        const progressFill = document.getElementById('progressFill');
+        const btnStart = document.getElementById('btnStartReading');
+        const btnClaim = document.getElementById('btnClaimCoin');
+        const messageDiv = document.getElementById('message');
+        const totalReadsSpan = document.getElementById('totalReads');
+        const coinsMinedSpan = document.getElementById('coinsMined');
+        const avgTimeSpan = document.getElementById('avgTime');
+
+        // Actualizar métricas
+        function updateStats() {
+            totalReadsSpan.textContent = totalReads;
+            coinsMinedSpan.textContent = coinsMined;
+            // Tiempo promedio simulado (lecturas de ~3-5 min)
+            const avg = totalReads > 0 ? Math.floor((totalReads * 4.2) / Math.max(1, totalReads)) : 0;
+            avgTimeSpan.textContent = avg;
+            // Guardar en localStorage
+            localStorage.setItem('totalReads', totalReads);
+            localStorage.setItem('coinsMined', coinsMined);
+        }
+
+        // Empezar lectura
+        btnStart.addEventListener('click', function() {
+            if (isReading) return;
+            
+            isReading = true;
+            startTime = Date.now();
+            elapsedTime = 0;
+            canClaim = false;
+            btnClaim.disabled = true;
+            messageDiv.textContent = '📖 Leyendo...';
+            
+            // Scroll al área de lectura
+            readArea.scrollTop = 0;
+            progressFill.style.width = '0%';
+            
+            // Timer que simula progreso
+            let progress = 0;
+            timerInterval = setInterval(() => {
+                elapsedTime = (Date.now() - startTime) / 1000;
+                // Progreso basado en scroll (simulado) y tiempo
+                const scrollPercent = (readArea.scrollTop / (readArea.scrollHeight - readArea.clientHeight)) * 100;
+                progress = Math.min(100, Math.max(0, (elapsedTime / 30) * 100 + scrollPercent * 0.2));
+                progressFill.style.width = Math.min(100, progress) + '%';
+                
+                // Condición para reclamar: tiempo >= 120 segundos Y scroll >= 80%
+                const timeOk = elapsedTime >= 120;
+                const scrollOk = (readArea.scrollTop / (readArea.scrollHeight - readArea.clientHeight)) >= 0.8;
+                
+                if (timeOk && scrollOk && !canClaim) {
+                    canClaim = true;
+                    btnClaim.disabled = false;
+                    messageDiv.textContent = '✅ ¡Lectura completada! Reclama tu $LER';
+                    clearInterval(timerInterval);
+                    isReading = false;
+                } else if (elapsedTime > 180) {
+                    // Tiempo máximo de espera
+                    clearInterval(timerInterval);
+                    isReading = false;
+                    if (!canClaim) {
+                        messageDiv.textContent = '⏰ Tiempo agotado. Vuelve a intentarlo.';
+                        progressFill.style.width = '0%';
+                    }
+                }
+            }, 1000);
+        });
+
+        // Reclamar moneda
+        btnClaim.addEventListener('click', function() {
+            if (!canClaim) return;
+            
+            // Simular anti-bot
+            const isBot = Math.random() < 0.05; // 5% de probabilidad (para demo)
+            if (isBot) {
+                messageDiv.textContent = '🤖 ¡Detección de bot! Intenta de nuevo leyendo más despacio.';
+                btnClaim.disabled = true;
+                canClaim = false;
+                progressFill.style.width = '0%';
+                return;
+            }
+            
+            // Reclamar
+            coinsMined += 1;
+            totalReads += 1;
+            localStorage.setItem('coinsMined', coinsMined);
+            localStorage.setItem('totalReads', totalReads);
+            updateStats();
+            
+            messageDiv.textContent = '🎉 ¡Ganaste 1 $LER! Sigue leyendo para minar más.';
+            btnClaim.disabled = true;
+            canClaim = false;
+            progressFill.style.width = '0%';
+            // Animación
+            const badge = document.createElement('span');
+            badge.textContent = ' +1 $LER';
+            badge.style.color = '#58a6ff';
+            badge.style.fontWeight = 'bold';
+            messageDiv.appendChild(badge);
+            setTimeout(() => {
+                messageDiv.innerHTML = '📚 ¡Sigue leyendo para ganar más monedas!';
+            }, 3000);
+        });
+
+        // Botón de contacto (simulado)
+        document.getElementById('btnContact').addEventListener('click', function() {
+            alert('📩 Para patrocinios, escribe a: patrocinio@leercoin.com (demo)\n\nMientras tanto, invita a más usuarios a usar la plataforma. ¡Eso es lo que más valor tiene para las marcas!');
+        });
+
+        // Inicializar
+        updateStats();
+        messageDiv.textContent = '📚 Haz clic en "Empezar a leer" y mina $LER.';
+    </script>
+</body>
+              </html>
