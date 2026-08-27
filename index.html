@@ -108,7 +108,7 @@
             font-size: 1rem;
             line-height: 1.6;
             color: #c9d1d9;
-            user-select: none; /* Dificulta scraping simple */
+            user-select: none;
         }
         .read-area p {
             margin-bottom: 12px;
@@ -174,7 +174,7 @@
 <body>
     <div class="container">
         <h1>📖 LeerCoin</h1>
-        <p class="subtitle">Mina criptomonedas leyendo artículos · Sin bots · Sin trampas</p>
+        <p class="subtitle">Mina criptomonedas leyendo artículos · Sin bots · Sin trampas ⚡</p>
 
         <!-- Panel de métricas -->
         <div class="card">
@@ -254,14 +254,15 @@
 
     <script>
         // ==========================================
-        // MOTOR PARAMÉTRICO DE VERIFICACIÓN HUMANA
+        // MOTOR PARAMÉTRICO DE VERIFICACIÓN HUMANA (OPTIMIZADO)
         // ==========================================
         const PARAMETERS = {
-            MIN_READ_TIME_SEC: 15,    // Tiempo mínimo global para leer el texto
-            MAX_SCROLL_SPEED: 1800,   // px por segundo (evita desplazar instantáneamente con scripts)
-            MIN_MOUSE_EVENTS: 5,      // Mínimo de movimientos/interacciones físicas
-            MIN_SCROLL_PAUSES: 2,     // Pausas naturales al leer parágrafos
-            TOTAL_WORDS: 140          // Palabras aprox en el artículo
+            MIN_READ_TIME_SEC: 10,    // Reducido a 10s para hacerlo más fluido
+            MAX_SCROLL_SPEED: 4000,   // px por segundo (tolerancia para impulsos rápidos de pulgar)
+            MAX_SPEED_STRIKES: 3,     // Permite hasta 3 picos de velocidad rápida antes de marcar como bot
+            MIN_MOUSE_EVENTS: 3,      // Mínimo de interacciones físicas
+            MIN_SCROLL_PAUSES: 1,     // Exige al menos 1 pausa corta de lectura
+            PAUSE_THRESHOLD_MS: 450   // Pausa detectada tras 450 ms (más natural)
         };
 
         let readingState = {
@@ -272,6 +273,7 @@
             scrollEventsCount: 0,
             mouseMovements: 0,
             pausesCount: 0,
+            speedStrikes: 0,
             isBotFlagged: false,
             botReason: '',
             challengeSolved: false,
@@ -318,20 +320,23 @@
             const deltaPx = Math.abs(currentScrollTop - readingState.lastScrollTop);
             const deltaTimeSec = (now - readingState.lastScrollTime) / 1000;
 
-            // 1. Detección de velocidad de scroll inhumana (bots)
+            // 1. Detección con tolerancia de velocidad de scroll
             if (deltaTimeSec > 0) {
                 const speed = deltaPx / deltaTimeSec;
                 if (speed > PARAMETERS.MAX_SCROLL_SPEED) {
-                    readingState.isBotFlagged = true;
-                    readingState.botReason = 'Velocidad de scroll sobrehumana detectada.';
+                    readingState.speedStrikes++;
+                    if (readingState.speedStrikes > PARAMETERS.MAX_SPEED_STRIKES) {
+                        readingState.isBotFlagged = true;
+                        readingState.botReason = 'Velocidad de scroll sobrehumana sostenida.';
+                    }
                 }
             }
 
-            // 2. Conteo de pausas de lectura
+            // 2. Conteo de pausas de lectura (Umbral reducido a 450 ms)
             clearTimeout(pauseTimer);
             pauseTimer = setTimeout(() => {
                 if (readingState.active) readingState.pausesCount++;
-            }, 800);
+            }, PARAMETERS.PAUSE_THRESHOLD_MS);
 
             readingState.lastScrollTop = currentScrollTop;
             readingState.lastScrollTime = now;
@@ -358,6 +363,7 @@
                 scrollEventsCount: 0,
                 mouseMovements: 0,
                 pausesCount: 0,
+                speedStrikes: 0,
                 isBotFlagged: false,
                 botReason: '',
                 challengeSolved: false,
@@ -378,7 +384,7 @@
 
             const elapsedTimeSec = (Date.now() - readingState.startTime) / 1000;
 
-            // Regla A: Tiempo demasiado rápido (Lectura sobrehumana)
+            // Regla A: Tiempo demasiado rápido
             if (elapsedTimeSec < PARAMETERS.MIN_READ_TIME_SEC) {
                 readingState.isBotFlagged = true;
                 readingState.botReason = `Lectura demasiado rápida (${elapsedTimeSec.toFixed(1)}s). Se requieren mínimo ${PARAMETERS.MIN_READ_TIME_SEC}s.`;
@@ -401,7 +407,7 @@
                 messageDiv.textContent = `🤖 Verificación Fallida: ${readingState.botReason}`;
                 btnClaim.disabled = true;
             } else {
-                // Si pasa las métricas, solicitar confirmación matemática ligera (CAPTCHA embebido)
+                // Si pasa las métricas relajadas, activar reto cognitivo
                 triggerHumanChallenge();
             }
         }
@@ -416,7 +422,7 @@
 
             challengeQuestion.textContent = `💡 Para finalizar, resuelve: ¿Cuánto es ${n1} + ${n2}?`;
             challengeBox.style.display = 'block';
-            messageDiv.textContent = '🔍 Confirma la suma para activar el reclamo.';
+            messageDiv.textContent = '🔍 Confirms la suma para activar el reclamo.';
         }
 
         btnVerifyChallenge.addEventListener('click', () => {
