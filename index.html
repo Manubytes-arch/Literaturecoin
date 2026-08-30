@@ -207,10 +207,10 @@
             </div>
             <div class="read-area" id="readArea">
                 <p><strong>El poder de la lectura atenta</strong></p>
-                <p>En un mundo de distracciones constantes, la capacidad de leer con atención se está convirtiendo en un superpoder. Cada vez menos personas logran concentrarse en un texto por más de 60 segundos.</p>
+                <p>En un mundo de distracciones constantes, la capacidad de leer con atención se está convirtiendo en un superpoder. Cada vez menos personas logran concentrarse en un texto por más [...]
                 <p>LeerCoin nace para cambiar eso. Queremos recompensar a quienes cultivan su mente, a quienes dedican tiempo a entender, reflexionar y aprender.</p>
-                <p><strong>¿Cómo funciona?</strong> Cada vez que lees un artículo completo en nuestra plataforma, ganas monedas. No necesitas minería costosa ni hardware especial. Solo tu atención y tu tiempo.</p>
-                <p>Más adelante, estas monedas podrán canjearse por libros, cursos y experiencias educativas. Porque creemos que el conocimiento debe ser accesible, y quienes lo buscan merecen ser reconocidos.</p>
+                <p><strong>¿Cómo funciona?</strong> Cada vez que lees un artículo completo en nuestra plataforma, ganas monedas. No necesitas minería costosa ni hardware especial. Solo tu atenció[...]
+                <p>Más adelante, estas monedas podrán canjearse por libros, cursos y experiencias educativas. Porque creemos que el conocimiento debe ser accesible, y quienes lo buscan merecen ser r[...]
                 <p>Este es el primer paso de una revolución silenciosa: la economía de la atención bien invertida. ¿Te sumas?</p>
             </div>
             
@@ -254,214 +254,212 @@
 
     <script>
         // ==========================================
-        // MOTOR PARAMÉTRICO DE VERIFICACIÓN HUMANA (OPTIMIZADO)
+        // ENCAPSULAMIENTO DE SEGURIDAD (IIFE)
         // ==========================================
-        const PARAMETERS = {
-            MIN_READ_TIME_SEC: 10,    // Reducido a 10s para hacerlo más fluido
-            MAX_SCROLL_SPEED: 4000,   // px por segundo (tolerancia para impulsos rápidos de pulgar)
-            MAX_SPEED_STRIKES: 3,     // Permite hasta 3 picos de velocidad rápida antes de marcar como bot
-            MIN_MOUSE_EVENTS: 3,      // Mínimo de interacciones físicas
-            MIN_SCROLL_PAUSES: 1,     // Exige al menos 1 pausa corta de lectura
-            PAUSE_THRESHOLD_MS: 450   // Pausa detectada tras 450 ms (más natural)
-        };
+        (() => {
+            'use strict';
 
-        let readingState = {
-            active: false,
-            startTime: 0,
-            lastScrollTop: 0,
-            lastScrollTime: 0,
-            scrollEventsCount: 0,
-            mouseMovements: 0,
-            pausesCount: 0,
-            speedStrikes: 0,
-            isBotFlagged: false,
-            botReason: '',
-            challengeSolved: false,
-            mathAnswer: null
-        };
+            // Configuración de parámetros de verificación
+            const PARAMETERS = Object.freeze({
+                MIN_READ_TIME_SEC: 15,    // Tiempo mínimo global de lectura
+                MAX_SCROLL_SPEED: 1800,   // Límite de px/seg para detectar scripts
+                MIN_MOUSE_EVENTS: 5,      // Interacción física mínima
+                MIN_SCROLL_PAUSES: 2,     // Pausas naturales al leer
+                TOTAL_WORDS: 140
+            });
 
-        let totalReads = parseInt(localStorage.getItem('totalReads')) || 0;
-        let coinsMined = parseInt(localStorage.getItem('coinsMined')) || 0;
-
-        // Elementos DOM
-        const readArea = document.getElementById('readArea');
-        const progressFill = document.getElementById('progressFill');
-        const btnStart = document.getElementById('btnStartReading');
-        const btnClaim = document.getElementById('btnClaimCoin');
-        const messageDiv = document.getElementById('message');
-        const totalReadsSpan = document.getElementById('totalReads');
-        const coinsMinedSpan = document.getElementById('coinsMined');
-        const avgTimeSpan = document.getElementById('avgTime');
-        const challengeBox = document.getElementById('challengeBox');
-        const challengeQuestion = document.getElementById('challengeQuestion');
-        const challengeAnswer = document.getElementById('challengeAnswer');
-        const btnVerifyChallenge = document.getElementById('btnVerifyChallenge');
-
-        function updateStats() {
-            totalReadsSpan.textContent = totalReads;
-            coinsMinedSpan.textContent = coinsMined;
-            const avg = totalReads > 0 ? (totalReads * 0.8).toFixed(1) : 0;
-            avgTimeSpan.textContent = avg;
-            localStorage.setItem('totalReads', totalReads);
-            localStorage.setItem('coinsMined', coinsMined);
-        }
-
-        // Registrar telemetría humana (movimiento de cursor / toques en pantalla)
-        window.addEventListener('mousemove', () => { if (readingState.active) readingState.mouseMovements++; });
-        window.addEventListener('touchstart', () => { if (readingState.active) readingState.mouseMovements += 2; });
-
-        // Análisis de Desplazamiento (Scroll)
-        let pauseTimer = null;
-        readArea.addEventListener('scroll', () => {
-            if (!readingState.active) return;
-
-            const now = Date.now();
-            const currentScrollTop = readArea.scrollTop;
-            const deltaPx = Math.abs(currentScrollTop - readingState.lastScrollTop);
-            const deltaTimeSec = (now - readingState.lastScrollTime) / 1000;
-
-            // 1. Detección con tolerancia de velocidad de scroll
-            if (deltaTimeSec > 0) {
-                const speed = deltaPx / deltaTimeSec;
-                if (speed > PARAMETERS.MAX_SCROLL_SPEED) {
-                    readingState.speedStrikes++;
-                    if (readingState.speedStrikes > PARAMETERS.MAX_SPEED_STRIKES) {
-                        readingState.isBotFlagged = true;
-                        readingState.botReason = 'Velocidad de scroll sobrehumana sostenida.';
-                    }
-                }
-            }
-
-            // 2. Conteo de pausas de lectura (Umbral reducido a 450 ms)
-            clearTimeout(pauseTimer);
-            pauseTimer = setTimeout(() => {
-                if (readingState.active) readingState.pausesCount++;
-            }, PARAMETERS.PAUSE_THRESHOLD_MS);
-
-            readingState.lastScrollTop = currentScrollTop;
-            readingState.lastScrollTime = now;
-            readingState.scrollEventsCount++;
-
-            // Actualizar visualización del progreso
-            const maxScroll = readArea.scrollHeight - readArea.clientHeight;
-            const scrollPercent = Math.min(100, (currentScrollTop / maxScroll) * 100);
-            progressFill.style.width = `${scrollPercent}%`;
-
-            // Evaluar si llegó al final
-            if (scrollPercent >= 95) {
-                checkHumanStatus();
-            }
-        });
-
-        // Iniciar Lectura
-        btnStart.addEventListener('click', () => {
-            readingState = {
-                active: true,
-                startTime: Date.now(),
-                lastScrollTop: readArea.scrollTop,
-                lastScrollTime: Date.now(),
+            // Estado privado protegido (No accesible desde la consola F12)
+            let readingState = {
+                active: false,
+                startTime: 0,
+                lastScrollTop: 0,
+                lastScrollTime: 0,
                 scrollEventsCount: 0,
                 mouseMovements: 0,
                 pausesCount: 0,
-                speedStrikes: 0,
                 isBotFlagged: false,
                 botReason: '',
                 challengeSolved: false,
                 mathAnswer: null
             };
 
-            readArea.scrollTop = 0;
-            progressFill.style.width = '0%';
-            btnClaim.disabled = true;
-            challengeBox.style.display = 'none';
-            messageDiv.style.color = '#58a6ff';
-            messageDiv.textContent = '📖 Lectura en curso. Desplázate a ritmo natural...';
-        });
+            let totalReads = parseInt(localStorage.getItem('totalReads')) || 0;
+            let coinsMined = parseInt(localStorage.getItem('coinsMined')) || 0;
+            let pauseTimer = null;
 
-        // Validar si los parámetros corresponden a un humano
-        function checkHumanStatus() {
-            if (!readingState.active) return;
+            // Selección de elementos DOM
+            const readArea = document.getElementById('readArea');
+            const progressFill = document.getElementById('progressFill');
+            const btnStart = document.getElementById('btnStartReading');
+            const btnClaim = document.getElementById('btnClaimCoin');
+            const messageDiv = document.getElementById('message');
+            const totalReadsSpan = document.getElementById('totalReads');
+            const coinsMinedSpan = document.getElementById('coinsMined');
+            const avgTimeSpan = document.getElementById('avgTime');
+            const challengeBox = document.getElementById('challengeBox');
+            const challengeQuestion = document.getElementById('challengeQuestion');
+            const challengeAnswer = document.getElementById('challengeAnswer');
+            const btnVerifyChallenge = document.getElementById('btnVerifyChallenge');
 
-            const elapsedTimeSec = (Date.now() - readingState.startTime) / 1000;
-
-            // Regla A: Tiempo demasiado rápido
-            if (elapsedTimeSec < PARAMETERS.MIN_READ_TIME_SEC) {
-                readingState.isBotFlagged = true;
-                readingState.botReason = `Lectura demasiado rápida (${elapsedTimeSec.toFixed(1)}s). Se requieren mínimo ${PARAMETERS.MIN_READ_TIME_SEC}s.`;
+            function updateStats() {
+                totalReadsSpan.textContent = totalReads;
+                coinsMinedSpan.textContent = coinsMined;
+                const avg = totalReads > 0 ? (totalReads * 0.8).toFixed(1) : 0;
+                avgTimeSpan.textContent = avg;
+                localStorage.setItem('totalReads', totalReads);
+                localStorage.setItem('coinsMined', coinsMined);
             }
 
-            // Regla B: Sin suficiente interacción física
-            if (readingState.mouseMovements < PARAMETERS.MIN_MOUSE_EVENTS) {
-                readingState.isBotFlagged = true;
-                readingState.botReason = 'Falta de movimiento biomecánico del ratón o pantalla táctil.';
-            }
+            // Captura de eventos biomecánicos
+            window.addEventListener('mousemove', () => { 
+                if (readingState.active) readingState.mouseMovements++; 
+            });
+            window.addEventListener('touchstart', () => { 
+                if (readingState.active) readingState.mouseMovements += 2; 
+            });
 
-            // Regla C: Sin pausas de lectura
-            if (readingState.pausesCount < PARAMETERS.MIN_SCROLL_PAUSES) {
-                readingState.isBotFlagged = true;
-                readingState.botReason = 'Ausencia de pausas de lectura naturales.';
-            }
+            // Análisis teleférico del scroll
+            readArea.addEventListener('scroll', () => {
+                if (!readingState.active) return;
 
-            if (readingState.isBotFlagged) {
-                messageDiv.style.color = '#f85149';
-                messageDiv.textContent = `🤖 Verificación Fallida: ${readingState.botReason}`;
+                const now = Date.now();
+                const currentScrollTop = readArea.scrollTop;
+                const deltaPx = Math.abs(currentScrollTop - readingState.lastScrollTop);
+                const deltaTimeSec = (now - readingState.lastScrollTime) / 1000;
+
+                // Detección de velocidad no humana
+                if (deltaTimeSec > 0) {
+                    const speed = deltaPx / deltaTimeSec;
+                    if (speed > PARAMETERS.MAX_SCROLL_SPEED) {
+                        readingState.isBotFlagged = true;
+                        readingState.botReason = 'Velocidad de scroll sobrehumana detectada.';
+                    }
+                }
+
+                // Pausas de lectura
+                clearTimeout(pauseTimer);
+                pauseTimer = setTimeout(() => {
+                    if (readingState.active) readingState.pausesCount++;
+                }, 800);
+
+                readingState.lastScrollTop = currentScrollTop;
+                readingState.lastScrollTime = now;
+                readingState.scrollEventsCount++;
+
+                const maxScroll = readArea.scrollHeight - readArea.clientHeight;
+                const scrollPercent = Math.min(100, (currentScrollTop / maxScroll) * 100);
+                progressFill.style.width = `${scrollPercent}%`;
+
+                if (scrollPercent >= 95) {
+                    checkHumanStatus();
+                }
+            });
+
+            // Inicio de lectura
+            btnStart.addEventListener('click', () => {
+                readingState = {
+                    active: true,
+                    startTime: Date.now(),
+                    lastScrollTop: readArea.scrollTop,
+                    lastScrollTime: Date.now(),
+                    scrollEventsCount: 0,
+                    mouseMovements: 0,
+                    pausesCount: 0,
+                    isBotFlagged: false,
+                    botReason: '',
+                    challengeSolved: false,
+                    mathAnswer: null
+                };
+
+                readArea.scrollTop = 0;
+                progressFill.style.width = '0%';
                 btnClaim.disabled = true;
-            } else {
-                // Si pasa las métricas relajadas, activar reto cognitivo
-                triggerHumanChallenge();
-            }
-        }
-
-        // Desafío aleatorio de confirmación
-        function triggerHumanChallenge() {
-            if (readingState.challengeSolved) return;
-            
-            const n1 = Math.floor(Math.random() * 9) + 1;
-            const n2 = Math.floor(Math.random() * 9) + 1;
-            readingState.mathAnswer = n1 + n2;
-
-            challengeQuestion.textContent = `💡 Para finalizar, resuelve: ¿Cuánto es ${n1} + ${n2}?`;
-            challengeBox.style.display = 'block';
-            messageDiv.textContent = '🔍 Confirms la suma para activar el reclamo.';
-        }
-
-        btnVerifyChallenge.addEventListener('click', () => {
-            const userAns = parseInt(challengeAnswer.value);
-            if (userAns === readingState.mathAnswer) {
-                readingState.challengeSolved = true;
                 challengeBox.style.display = 'none';
-                btnClaim.disabled = false;
-                messageDiv.style.color = '#3fb950';
-                messageDiv.textContent = '✅ Verificación humana completada. ¡Puedes reclamar tu $LER!';
-            } else {
-                messageDiv.style.color = '#f85149';
-                messageDiv.textContent = '❌ Respuesta incorrecta. Inténtalo de nuevo.';
+                messageDiv.style.color = '#58a6ff';
+                messageDiv.textContent = '📖 Lectura en curso. Desplázate a ritmo natural...';
+            });
+
+            // Evaluación paramétrica humana
+            function checkHumanStatus() {
+                if (!readingState.active) return;
+
+                const elapsedTimeSec = (Date.now() - readingState.startTime) / 1000;
+
+                if (elapsedTimeSec < PARAMETERS.MIN_READ_TIME_SEC) {
+                    readingState.isBotFlagged = true;
+                    readingState.botReason = `Lectura demasiado rápida (${elapsedTimeSec.toFixed(1)}s). Se requieren mínimo ${PARAMETERS.MIN_READ_TIME_SEC}s.`;
+                }
+
+                if (readingState.mouseMovements < PARAMETERS.MIN_MOUSE_EVENTS) {
+                    readingState.isBotFlagged = true;
+                    readingState.botReason = 'Falta de movimiento biomecánico del ratón o pantalla táctil.';
+                }
+
+                if (readingState.pausesCount < PARAMETERS.MIN_SCROLL_PAUSES) {
+                    readingState.isBotFlagged = true;
+                    readingState.botReason = 'Ausencia de pausas de lectura naturales.';
+                }
+
+                if (readingState.isBotFlagged) {
+                    messageDiv.style.color = '#f85149';
+                    messageDiv.textContent = `🤖 Verificación Fallida: ${readingState.botReason}`;
+                    btnClaim.disabled = true;
+                } else {
+                    triggerHumanChallenge();
+                }
             }
-        });
 
-        // Reclamar Moneda
-        btnClaim.addEventListener('click', () => {
-            if (!readingState.challengeSolved || readingState.isBotFlagged) return;
+            // Desafío CAPTCHA integrado
+            function triggerHumanChallenge() {
+                if (readingState.challengeSolved) return;
+                
+                const n1 = Math.floor(Math.random() * 9) + 1;
+                const n2 = Math.floor(Math.random() * 9) + 1;
+                readingState.mathAnswer = n1 + n2;
 
-            coinsMined += 1;
-            totalReads += 1;
+                challengeQuestion.textContent = `💡 Para finalizar, resuelve: ¿Cuánto es ${n1} + ${n2}?`;
+                challengeBox.style.display = 'block';
+                messageDiv.textContent = '🔍 Confirma la suma para activar el reclamo.';
+            }
+
+            btnVerifyChallenge.addEventListener('click', () => {
+                const userAns = parseInt(challengeAnswer.value);
+                if (userAns === readingState.mathAnswer) {
+                    readingState.challengeSolved = true;
+                    challengeBox.style.display = 'none';
+                    btnClaim.disabled = false;
+                    messageDiv.style.color = '#3fb950';
+                    messageDiv.textContent = '✅ Verificación humana completada. ¡Puedes reclamar tu $LER!';
+                } else {
+                    messageDiv.style.color = '#f85149';
+                    messageDiv.textContent = '❌ Respuesta incorrecta. Inténtalo de nuevo.';
+                }
+            });
+
+            // Reclamo de tokens
+            btnClaim.addEventListener('click', () => {
+                if (!readingState.challengeSolved || readingState.isBotFlagged) return;
+
+                coinsMined += 1;
+                totalReads += 1;
+                updateStats();
+
+                readingState.active = false;
+                btnClaim.disabled = true;
+                messageDiv.style.color = '#58a6ff';
+                messageDiv.textContent = '🎉 ¡Minado exitoso! Recompensado con 1 $LER.';
+                progressFill.style.width = '0%';
+            });
+
+            // Evento patrocinadores
+            document.getElementById('btnContact').addEventListener('click', () => {
+                alert('📩 Para patrocinios y campañas verificadas, escribe a: patrocinio@leercoin.com');
+            });
+
+            // Inicialización de la App
             updateStats();
-
-            readingState.active = false;
-            btnClaim.disabled = true;
-            messageDiv.style.color = '#58a6ff';
-            messageDiv.textContent = '🎉 ¡Minado exitoso! Recompensado con 1 $LER.';
-            progressFill.style.width = '0%';
-        });
-
-        // Contacto Patrocinio
-        document.getElementById('btnContact').addEventListener('click', () => {
-            alert('📩 Para patrocinios y campañas verificadas, escribe a: patrocinio@leercoin.com');
-        });
-
-        // Inicializar
-        updateStats();
-        messageDiv.textContent = '📚 Haz clic en "Empezar a leer" para iniciar el minado.';
+            messageDiv.textContent = '📚 Haz clic en "Empezar a leer" para iniciar el minado.';
+        })();
     </script>
 </body>
 </html>
