@@ -207,7 +207,7 @@
             </div>
             <div class="read-area" id="readArea">
                 <p><strong>El poder de la lectura atenta</strong></p>
-                <p>En un mundo de distracciones constantes, la capacidad de leer con atención se está convirtiendo en un superpoder. Cada vez menos personas logran concentrarse en un texto por más [...]
+                <p>En un mundo de distracciones constantes, la capacidad de leer con atención se está convirtiendo en un superpoder. Cada vez menos personas logran concentrarse en un texto por [...]
                 <p>LeerCoin nace para cambiar eso. Queremos recompensar a quienes cultivan su mente, a quienes dedican tiempo a entender, reflexionar y aprender.</p>
                 <p><strong>¿Cómo funciona?</strong> Cada vez que lees un artículo completo en nuestra plataforma, ganas monedas. No necesitas minería costosa ni hardware especial. Solo tu atenció[...]
                 <p>Más adelante, estas monedas podrán canjearse por libros, cursos y experiencias educativas. Porque creemos que el conocimiento debe ser accesible, y quienes lo buscan merecen ser r[...]
@@ -254,17 +254,19 @@
 
     <script>
         // ==========================================
-        // MOTOR DE VERIFICACIÓN BIOHUMANA (V2 FIXED)
+        // MOTOR PARAMÉTRICO DE VERIFICACIÓN HUMANA (TOLERANTE)
         // ==========================================
         (() => {
             'use strict';
 
-            const PARAMETERS = Object.freeze({
-                MIN_READ_TIME_SEC: 12,    // Tiempo mínimo realista para ~140 palabras
-                MAX_SCROLL_SPEED: 2000,   // Límite de px/seg
-                MIN_INTERACTION_EVENTS: 4,// Interacciones (toques o movimientos espaciados)
-                MIN_SCROLL_PAUSES: 2      // Pausas naturales al detener el scroll
-            });
+            const PARAMETERS = {
+                MIN_READ_TIME_SEC: 10,    // Mínimo 10 segundos para leer (antes 20s+)
+                MAX_SCROLL_SPEED: 4000,   // Hasta 4000 px/s (permite impulsos rápidos con el pulgar)
+                MAX_SPEED_STRIKES: 3,     // Da hasta 3 advertencias antes de marcar como bot
+                MIN_MOUSE_EVENTS: 3,      // Exige al menos 3 toques/movimientos en la pantalla
+                MIN_SCROLL_PAUSES: 1,     // Solo exige 1 pausa corta durante toda la lectura
+                PAUSE_THRESHOLD_MS: 450   // Registra pausa si frena la pantalla 450 ms (menos de medio segundo)
+            };
 
             let readingState = {
                 active: false,
@@ -274,6 +276,7 @@
                 interactionEvents: 0,
                 lastInteractionTime: 0,
                 pausesCount: 0,
+                speedStrikes: 0,
                 isBotFlagged: false,
                 botReason: '',
                 challengeSolved: false,
@@ -330,22 +333,25 @@
                 const deltaPx = Math.abs(currentScrollTop - readingState.lastScrollTop);
                 const deltaTimeSec = (now - readingState.lastScrollTime) / 1000;
 
-                // 1. Detección de velocidad inhumana
+                // 1. Detección de velocidad inhumana (con tolerancia de hasta 3 advertencias)
                 if (deltaTimeSec > 0) {
                     const speed = deltaPx / deltaTimeSec;
                     if (speed > PARAMETERS.MAX_SCROLL_SPEED) {
-                        readingState.isBotFlagged = true;
-                        readingState.botReason = 'Desplazamiento demasiado rápido o automatizado.';
+                        readingState.speedStrikes++;
+                        if (readingState.speedStrikes >= PARAMETERS.MAX_SPEED_STRIKES) {
+                            readingState.isBotFlagged = true;
+                            readingState.botReason = 'Desplazamiento demasiado rápido o automatizado.';
+                        }
                     }
                 }
 
-                // 2. Detección precisa de pausas (Se activa 700ms DESPUÉS de detener el scroll)
+                // 2. Detección de pausas (Se activa después de PAUSE_THRESHOLD_MS de detener el scroll)
                 clearTimeout(pauseTimer);
                 pauseTimer = setTimeout(() => {
                     if (readingState.active && !readingState.isBotFlagged) {
                         readingState.pausesCount++;
                     }
-                }, 700);
+                }, PARAMETERS.PAUSE_THRESHOLD_MS);
 
                 readingState.lastScrollTop = currentScrollTop;
                 readingState.lastScrollTime = now;
@@ -369,6 +375,7 @@
                     interactionEvents: 0,
                     lastInteractionTime: 0,
                     pausesCount: 0,
+                    speedStrikes: 0,
                     isBotFlagged: false,
                     botReason: '',
                     challengeSolved: false,
@@ -394,7 +401,7 @@
                     readingState.botReason = `Lectura demasiado rápida (${elapsedTimeSec.toFixed(1)}s). Se requieren mínimo ${PARAMETERS.MIN_READ_TIME_SEC}s.`;
                 }
 
-                if (readingState.interactionEvents < PARAMETERS.MIN_INTERACTION_EVENTS) {
+                if (readingState.interactionEvents < PARAMETERS.MIN_MOUSE_EVENTS) {
                     readingState.isBotFlagged = true;
                     readingState.botReason = 'Falta de interacción táctil o biomecánica suficiente.';
                 }
