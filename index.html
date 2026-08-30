@@ -254,28 +254,25 @@
 
     <script>
         // ==========================================
-        // ENCAPSULAMIENTO DE SEGURIDAD (IIFE)
+        // MOTOR DE VERIFICACIÓN BIOHUMANA (V2 FIXED)
         // ==========================================
         (() => {
             'use strict';
 
-            // Configuración de parámetros de verificación
             const PARAMETERS = Object.freeze({
-                MIN_READ_TIME_SEC: 15,    // Tiempo mínimo global de lectura
-                MAX_SCROLL_SPEED: 1800,   // Límite de px/seg para detectar scripts
-                MIN_MOUSE_EVENTS: 5,      // Interacción física mínima
-                MIN_SCROLL_PAUSES: 2,     // Pausas naturales al leer
-                TOTAL_WORDS: 140
+                MIN_READ_TIME_SEC: 12,    // Tiempo mínimo realista para ~140 palabras
+                MAX_SCROLL_SPEED: 2000,   // Límite de px/seg
+                MIN_INTERACTION_EVENTS: 4,// Interacciones (toques o movimientos espaciados)
+                MIN_SCROLL_PAUSES: 2      // Pausas naturales al detener el scroll
             });
 
-            // Estado privado protegido (No accesible desde la consola F12)
             let readingState = {
                 active: false,
                 startTime: 0,
                 lastScrollTop: 0,
                 lastScrollTime: 0,
-                scrollEventsCount: 0,
-                mouseMovements: 0,
+                interactionEvents: 0,
+                lastInteractionTime: 0,
                 pausesCount: 0,
                 isBotFlagged: false,
                 botReason: '',
@@ -287,7 +284,7 @@
             let coinsMined = parseInt(localStorage.getItem('coinsMined')) || 0;
             let pauseTimer = null;
 
-            // Selección de elementos DOM
+            // Elementos DOM
             const readArea = document.getElementById('readArea');
             const progressFill = document.getElementById('progressFill');
             const btnStart = document.getElementById('btnStartReading');
@@ -310,15 +307,21 @@
                 localStorage.setItem('coinsMined', coinsMined);
             }
 
-            // Captura de eventos biomecánicos
-            window.addEventListener('mousemove', () => { 
-                if (readingState.active) readingState.mouseMovements++; 
-            });
-            window.addEventListener('touchstart', () => { 
-                if (readingState.active) readingState.mouseMovements += 2; 
-            });
+            // Registrar interacciones físicas espaciadas (Throttling a 300ms)
+            function registerHumanInteraction() {
+                if (!readingState.active) return;
+                const now = Date.now();
+                if (now - readingState.lastInteractionTime > 300) {
+                    readingState.interactionEvents++;
+                    readingState.lastInteractionTime = now;
+                }
+            }
 
-            // Análisis teleférico del scroll
+            window.addEventListener('mousemove', registerHumanInteraction);
+            window.addEventListener('touchstart', registerHumanInteraction);
+            window.addEventListener('touchmove', registerHumanInteraction);
+
+            // Control de scroll y pausas
             readArea.addEventListener('scroll', () => {
                 if (!readingState.active) return;
 
@@ -327,24 +330,25 @@
                 const deltaPx = Math.abs(currentScrollTop - readingState.lastScrollTop);
                 const deltaTimeSec = (now - readingState.lastScrollTime) / 1000;
 
-                // Detección de velocidad no humana
+                // 1. Detección de velocidad inhumana
                 if (deltaTimeSec > 0) {
                     const speed = deltaPx / deltaTimeSec;
                     if (speed > PARAMETERS.MAX_SCROLL_SPEED) {
                         readingState.isBotFlagged = true;
-                        readingState.botReason = 'Velocidad de scroll sobrehumana detectada.';
+                        readingState.botReason = 'Desplazamiento demasiado rápido o automatizado.';
                     }
                 }
 
-                // Pausas de lectura
+                // 2. Detección precisa de pausas (Se activa 700ms DESPUÉS de detener el scroll)
                 clearTimeout(pauseTimer);
                 pauseTimer = setTimeout(() => {
-                    if (readingState.active) readingState.pausesCount++;
-                }, 800);
+                    if (readingState.active && !readingState.isBotFlagged) {
+                        readingState.pausesCount++;
+                    }
+                }, 700);
 
                 readingState.lastScrollTop = currentScrollTop;
                 readingState.lastScrollTime = now;
-                readingState.scrollEventsCount++;
 
                 const maxScroll = readArea.scrollHeight - readArea.clientHeight;
                 const scrollPercent = Math.min(100, (currentScrollTop / maxScroll) * 100);
@@ -355,15 +359,15 @@
                 }
             });
 
-            // Inicio de lectura
+            // Iniciar Lectura
             btnStart.addEventListener('click', () => {
                 readingState = {
                     active: true,
                     startTime: Date.now(),
                     lastScrollTop: readArea.scrollTop,
                     lastScrollTime: Date.now(),
-                    scrollEventsCount: 0,
-                    mouseMovements: 0,
+                    interactionEvents: 0,
+                    lastInteractionTime: 0,
                     pausesCount: 0,
                     isBotFlagged: false,
                     botReason: '',
@@ -379,7 +383,7 @@
                 messageDiv.textContent = '📖 Lectura en curso. Desplázate a ritmo natural...';
             });
 
-            // Evaluación paramétrica humana
+            // Evaluación final
             function checkHumanStatus() {
                 if (!readingState.active) return;
 
@@ -390,14 +394,14 @@
                     readingState.botReason = `Lectura demasiado rápida (${elapsedTimeSec.toFixed(1)}s). Se requieren mínimo ${PARAMETERS.MIN_READ_TIME_SEC}s.`;
                 }
 
-                if (readingState.mouseMovements < PARAMETERS.MIN_MOUSE_EVENTS) {
+                if (readingState.interactionEvents < PARAMETERS.MIN_INTERACTION_EVENTS) {
                     readingState.isBotFlagged = true;
-                    readingState.botReason = 'Falta de movimiento biomecánico del ratón o pantalla táctil.';
+                    readingState.botReason = 'Falta de interacción táctil o biomecánica suficiente.';
                 }
 
                 if (readingState.pausesCount < PARAMETERS.MIN_SCROLL_PAUSES) {
                     readingState.isBotFlagged = true;
-                    readingState.botReason = 'Ausencia de pausas de lectura naturales.';
+                    readingState.botReason = 'Faltaron pausas de lectura naturales durante el desplazamiento.';
                 }
 
                 if (readingState.isBotFlagged) {
@@ -409,7 +413,6 @@
                 }
             }
 
-            // Desafío CAPTCHA integrado
             function triggerHumanChallenge() {
                 if (readingState.challengeSolved) return;
                 
@@ -417,9 +420,9 @@
                 const n2 = Math.floor(Math.random() * 9) + 1;
                 readingState.mathAnswer = n1 + n2;
 
-                challengeQuestion.textContent = `💡 Para finalizar, resuelve: ¿Cuánto es ${n1} + ${n2}?`;
+                challengeQuestion.textContent = `💡 Confirma para reclamar: ¿Cuánto es ${n1} + ${n2}?`;
                 challengeBox.style.display = 'block';
-                messageDiv.textContent = '🔍 Confirma la suma para activar el reclamo.';
+                messageDiv.textContent = '🔍 Resuelve la suma para desbloquear la recompensa.';
             }
 
             btnVerifyChallenge.addEventListener('click', () => {
@@ -429,14 +432,13 @@
                     challengeBox.style.display = 'none';
                     btnClaim.disabled = false;
                     messageDiv.style.color = '#3fb950';
-                    messageDiv.textContent = '✅ Verificación humana completada. ¡Puedes reclamar tu $LER!';
+                    messageDiv.textContent = '✅ ¡Verificación humana completada! Haz clic en Reclamar.';
                 } else {
                     messageDiv.style.color = '#f85149';
                     messageDiv.textContent = '❌ Respuesta incorrecta. Inténtalo de nuevo.';
                 }
             });
 
-            // Reclamo de tokens
             btnClaim.addEventListener('click', () => {
                 if (!readingState.challengeSolved || readingState.isBotFlagged) return;
 
@@ -447,16 +449,14 @@
                 readingState.active = false;
                 btnClaim.disabled = true;
                 messageDiv.style.color = '#58a6ff';
-                messageDiv.textContent = '🎉 ¡Minado exitoso! Recompensado con 1 $LER.';
+                messageDiv.textContent = '🎉 ¡Minado exitoso! Has recibido 1 $LER.';
                 progressFill.style.width = '0%';
             });
 
-            // Evento patrocinadores
             document.getElementById('btnContact').addEventListener('click', () => {
                 alert('📩 Para patrocinios y campañas verificadas, escribe a: patrocinio@leercoin.com');
             });
 
-            // Inicialización de la App
             updateStats();
             messageDiv.textContent = '📚 Haz clic en "Empezar a leer" para iniciar el minado.';
         })();
