@@ -2,6 +2,10 @@
 (() => {
     'use strict';
 
+    // 🔵 Conectar con Vercel API
+    const API_BASE_URL = 'https://literaturecoin.vercel.app/api';
+    let currentSessionToken = null;
+
     const PARAMETERS = {
         MIN_READ_TIME_SEC: 10,    // Mínimo 10 segundos para leer (antes 20s+)
         MAX_SCROLL_SPEED: 4000,   // Hasta 4000 px/s (permite impulsos rápidos con el pulgar)
@@ -108,8 +112,8 @@
         }
     });
 
-    // Iniciar Lectura
-    btnStart.addEventListener('click', () => {
+    // Iniciar Lectura con conexión a Vercel
+    btnStart.addEventListener('click', async () => {
         readingState = {
             active: true,
             startTime: Date.now(),
@@ -130,11 +134,36 @@
         btnClaim.disabled = true;
         challengeBox.style.display = 'none';
         messageDiv.style.color = '#58a6ff';
-        messageDiv.textContent = '📖 Lectura en curso. Desplázate a ritmo natural...';
+        messageDiv.textContent = '📖 Conectando con servidor...';
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/start-read`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    userId: 'user_1',
+                    bookId: 'book_1'
+                })
+            });
+
+            if (response.ok) {
+                const data = await response.json();
+                currentSessionToken = data.sessionToken;
+                messageDiv.textContent = '📖 Lectura en curso. Desplázate a ritmo natural...';
+            } else {
+                throw new Error('Error en la conexión con el servidor');
+            }
+        } catch (error) {
+            messageDiv.style.color = '#f85149';
+            messageDiv.textContent = `❌ Error: ${error.message}`;
+            readingState.active = false;
+        }
     });
 
-    // Evaluación final
-    function checkHumanStatus() {
+    // Evaluación final con verificación en servidor
+    async function checkHumanStatus() {
         if (!readingState.active) return;
 
         const elapsedTimeSec = (Date.now() - readingState.startTime) / 1000;
@@ -159,7 +188,38 @@
             messageDiv.textContent = `🤖 Verificación Fallida: ${readingState.botReason}`;
             btnClaim.disabled = true;
         } else {
-            triggerHumanChallenge();
+            // 🔵 Petición POST a servidor para verificar lectura
+            if (currentSessionToken) {
+                try {
+                    const response = await fetch(`${API_BASE_URL}/verify-read`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            sessionToken: currentSessionToken,
+                            interactionEvents: readingState.interactionEvents,
+                            pausesCount: readingState.pausesCount,
+                            speedStrikes: readingState.speedStrikes
+                        })
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        messageDiv.style.color = '#3fb950';
+                        messageDiv.textContent = data.message || '✅ Lectura verificada por servidor. Resuelve el desafío.';
+                        triggerHumanChallenge();
+                    } else {
+                        throw new Error('Verificación fallida en servidor');
+                    }
+                } catch (error) {
+                    messageDiv.style.color = '#f85149';
+                    messageDiv.textContent = `❌ Error en verificación: ${error.message}`;
+                    btnClaim.disabled = true;
+                }
+            } else {
+                triggerHumanChallenge();
+            }
         }
     }
 
